@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Uczestnik Quizu</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Dołącz do Quizu</h1>
+    <div id="login">
+        <input type="text" id="name" placeholder="Twoje imię">
+        <button onclick="joinQuiz()">Dołącz</button>
+    </div>
+    
+    <div id="quiz" style="display:none;">
+        <h2 id="question"></h2>
+        <div id="options">
+            <!-- Opcje odpowiedzi -->
+        </div>
+        <button onclick="submitAnswer()">Zatwierdź Odpowiedź</button>
+    </div>
+    
+    <div id="results" style="display:none;">
+        <h2>Twoje Wyniki:</h2>
+        <p id="score"></p>
+    </div>
+    
+    <script>
+        var socket = io();
+        var session_id = "{{ session_id }}";
+        var participant_id = null;
+        var selected_answer = null;
+        
+        socket.on('connect', function() {
+            console.log('Połączono z serwerem');
+        });
+        
+        socket.on('join_accepted', function(data) {
+            participant_id = data.participant_id;
+            document.getElementById('login').style.display = 'none';
+            document.getElementById('quiz').style.display = 'block';
+        });
+        
+        socket.on('new_question', function(data) {
+            document.getElementById('question').textContent = data.question;
+            var optionsDiv = document.getElementById('options');
+            optionsDiv.innerHTML = '';
+            data.options.forEach(function(option, index) {
+                var btn = document.createElement('button');
+                btn.textContent = option;
+                btn.onclick = function() {
+                    selected_answer = String.fromCharCode(65 + index); // 'A', 'B', etc.
+                };
+                optionsDiv.appendChild(btn);
+                optionsDiv.appendChild(document.createElement('br'));
+            });
+        });
+        
+        socket.on('results', function(participants) {
+            var score = participants[participant_id].score;
+            document.getElementById('quiz').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('score').textContent = 'Zdobyte punkty: ' + score;
+        });
+        
+        function joinQuiz() {
+            var name = document.getElementById('name').value;
+            socket.emit('join', {
+                'session_id': session_id,
+                'name': name
+            });
+        }
+        
+        function submitAnswer() {
+            if (selected_answer) {
+                socket.emit('submit_answer', {
+                    'session_id': session_id,
+                    'participant_id': participant_id,
+                    'answer': selected_answer
+                });
+                selected_answer = null;
+                alert('Odpowiedź wysłana!');
+            } else {
+                alert('Wybierz odpowiedź przed wysłaniem.');
+            }
+        }
+    </script>
+</body>
+</html>

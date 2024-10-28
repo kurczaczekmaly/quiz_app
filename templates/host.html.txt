@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Host Quizu</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Witaj, Host!</h1>
+    <p>Twój unikalny kod QR do dołączenia uczestników:</p>
+    <img src="{{ qr_url }}" alt="QR Code">
+    <h2>Uczestnicy:</h2>
+    <ul id="participants">
+        <!-- Lista uczestników -->
+    </ul>
+    
+    <h2>Dodaj Pytanie:</h2>
+    <input type="text" id="question" placeholder="Treść pytania"><br>
+    <input type="text" id="optionA" placeholder="Opcja A"><br>
+    <input type="text" id="optionB" placeholder="Opcja B"><br>
+    <input type="text" id="optionC" placeholder="Opcja C"><br>
+    <input type="text" id="optionD" placeholder="Opcja D"><br>
+    <button onclick="sendQuestion()">Wyślij Pytanie</button>
+    
+    <h2>Wyniki:</h2>
+    <button onclick="getResults()">Pokaż Wyniki</button>
+    <ul id="results">
+        <!-- Wyniki -->
+    </ul>
+    
+    <script>
+        var socket = io();
+        var session_id = "{{ session_id }}";
+        
+        socket.on('connect', function() {
+            console.log('Połączono z serwerem');
+        });
+        
+        socket.on('update_participants', function(participants) {
+            var list = document.getElementById('participants');
+            list.innerHTML = '';
+            for (var id in participants) {
+                var li = document.createElement('li');
+                li.textContent = participants[id].name + ' - Punkty: ' + participants[id].score;
+                list.appendChild(li);
+            }
+        });
+        
+        socket.on('results', function(participants) {
+            var list = document.getElementById('results');
+            list.innerHTML = '';
+            for (var id in participants) {
+                var li = document.createElement('li');
+                li.textContent = participants[id].name + ' - Punkty: ' + participants[id].score;
+                list.appendChild(li);
+            }
+        });
+        
+        function sendQuestion() {
+            var question = document.getElementById('question').value;
+            var options = [
+                document.getElementById('optionA').value,
+                document.getElementById('optionB').value,
+                document.getElementById('optionC').value,
+                document.getElementById('optionD').value
+            ];
+            socket.emit('send_question', {
+                'session_id': session_id,
+                'question': question,
+                'options': options
+            });
+        }
+        
+        function getResults() {
+            socket.emit('get_results', {
+                'session_id': session_id
+            });
+        }
+    </script>
+</body>
+</html>
